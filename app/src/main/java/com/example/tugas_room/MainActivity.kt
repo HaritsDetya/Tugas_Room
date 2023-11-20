@@ -3,10 +3,12 @@ package com.example.tugas_room
 import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.tugas_room.database.Note
 import com.example.tugas_room.database.NoteDao
 import com.example.tugas_room.database.NoteRoomDatabase
+import com.example.tugas_room.database.NoteViewModel
 import com.example.tugas_room.databinding.ActivityMainBinding
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -26,6 +28,7 @@ class MainActivity : AppCompatActivity() {
         executorService = Executors.newSingleThreadExecutor()
         val db = NoteRoomDatabase.getDatabase(this)
         mNotesDao = db!!.noteDao()!!
+
 
         noteAdapter = NoteAdapter(this, emptyList(),
             onItemClick = { note ->
@@ -52,6 +55,7 @@ class MainActivity : AppCompatActivity() {
             // Update the data set in the adapter
             noteAdapter.notes = notes
             noteAdapter.notifyDataSetChanged()
+            noteAdapter.submitList(notes)
         }
     }
 
@@ -60,18 +64,26 @@ class MainActivity : AppCompatActivity() {
     private fun handleItemClick(note: Note) {
         // Handle item click
         updateId = note.id
+        update(note)
 
         // Redirect to AddItemActivity for update
-        val intent = Intent(this@MainActivity, AddItemActivity::class.java)
-        intent.putExtra(AddItemActivity.EXTRA_TITLE, note.title)
-        intent.putExtra(AddItemActivity.EXTRA_DESC, note.description)
-        intent.putExtra(AddItemActivity.EXTRA_DATE, note.date)
-        startActivity(intent)
+        val intent = Intent(this@MainActivity, UpdateItemActivity::class.java)
+        startActivityForResult(intent, updateId)
     }
 
     private fun handleItemLongClick(note: Note) {
         // Handle item long click
         delete(note)
+    }
+
+    private fun update(note: Note) {
+        executorService.execute {
+            try {
+                mNotesDao.update(note)
+            } catch (e: Exception) {
+                // Handle the exception
+            }
+        }
     }
 
     private fun delete(note: Note) {
